@@ -8,10 +8,6 @@ terraform {
     }
   }
 
-  backend "gcs" {
-    bucket = "ludo-terraform-state-bucket-storage"
-    prefix = "ludo/${var.env}/terraform.tfstate"
-  }
 }
 
 provider "google" {
