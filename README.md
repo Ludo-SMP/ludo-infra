@@ -131,13 +131,12 @@ AWS와 마찬가지로 bucket 이름이 전세계에서 고유해야 할겁니�
 
 <img width="1274" alt="image" src="https://github.com/user-attachments/assets/031913d6-bdd3-4313-b8a9-0c5fa7d7ec12">
 
-여기에 terraform의 리소스 변경 히스토리가 저장되기 때문에 terraform destroy를 해도 날아가면 안 되서 remote state bucket 만큼은 
+여기에 terraform의 리소스 변경 히스토리가 저장되기 때문에 terraform destroy를 해도 날아가면 안 되서 remote state bucket 만큼은
 terraform으로 관리를 하지 않아서 따로 생성하는 것이며, 이 remote state 저장용 bucket 이름이 root dir의 `provider` 내에 `backend`에 들어갑니다.
 반드시 bucket과 이름을 맞춰줘야 합니다.
 또한 prod, stage 상관 없이 동일 bucket 공유하는 구조입니다. 동일 bucket 안에 prod/default.tfstate, stage/default.tfstate로 저장됩니다.
 
 <img width="682" alt="image" src="https://github.com/user-attachments/assets/c3f33c21-0ec7-4e62-8849-8a8a06835528">
-
 
 ## 4. Infra Repo에 Github Actions Variables, Secrets 등록
 
@@ -169,6 +168,37 @@ $ terraform init \
 
 `npm init`과 비슷하게 remote bucket으로 부터 상태를 불러와서 초기화 합니다.
 aws 등의 provider 다운로드 및 `.lock` 파일이 생기며, 이제 `terraform apply` 등을 사용할 수 있습니다.
+
+초기 or 환경이 변경될 때마다 실행해줘야 합니다.
+
+`-backend-config="prefix=ludo/ {prod} /terraform`
+
+중괄호로 강조한 이 부분이 환경에 맞춰 변경되어야 합니다.
+
+예를 들어 초기 실행 시에 `prod`로 설정한다면
+
+```sh
+$ terraform init \
+          -backend-config="bucket=ludo-terraform-state-bucket-storage" \
+          -backend-config="prefix=ludo/prod/terraform.tfstate"
+```
+
+먼저 위 명령어 실행을 하고 `apply` 등으로 배포 작업을 합니다.
+
+그러다 `test` 환경으로 전환하고 싶으면
+
+`prefix`를 `ludo/test/...`로 바꿔서 다시 초기화를 해야 합니다.
+
+```sh
+$ terraform init \
+          -backend-config="bucket=ludo-terraform-state-bucket-storage" \
+          -backend-config="prefix=ludo/test/terraform.tfstate"
+```
+
+terraform의 workspace를 사용하거나 디렉토리 구조를 환경 별로 나누고 symlink를 통해 재활용하는 대신 가장 심플하게 하나의 파일을 여러 환경에서 공유하는 방법을 선택했기 때문에, remote 상태 자체가 여러 bucket에서 관리 되어야 하여 그렇습니다.
+
+참고로 terraform workspace는 많은 전문가들이 비추천 하고,(마치 profile처럼 나눠서 사용 가능)
+현업에서는 환경/리전 별 디렉토리 구조화를 통한 방법이 권장되는 것 같습니다.
 
 ## 6. apply
 
