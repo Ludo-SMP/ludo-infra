@@ -1,0 +1,50 @@
+name: destroy infrastructure for prod environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "environment for deployment"
+        required: true
+        type: choice
+        default: "prod"
+        options:
+          - stage
+          - prod
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.9
+
+      - name: Configure GCP Credentials
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+          -backend-config="bucket=ludo-terraform-state-bucket-storage" \
+          -backend-config="prefix=ludo/${{ vars.env }}/terraform.tfstate"
+
+      - name: Terraform Destroy
+        run: |
+          terraform destroy \
+            -var="env=${{ inputs.environment }}" \
+            -var="app_image=${{ vars.APP_IMAGE }}" \
+            -var="project_id=${{ vars.PROJECT_ID }}" \
+            -var="iam_member_emails=[\"${{ vars.IAM_MEMBER_EMAILS }}\"]" \
+            -var="frontend_url=${{ vars.FRONTEND_URL }}" \
+            -var="db_name=${{ vars.DB_NAME }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="db_username=${{ vars.DB_USERNAME }}" \
+            -auto-approve \
+            --parallelism=10

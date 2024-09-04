@@ -1,0 +1,36 @@
+name: provision infrastructure for test environment
+
+env:
+  BACKEND_REPOSITORY: zxcev/ludo-backend-test
+on:
+  repository_dispatch:
+    types: [provision-test-infra]
+
+jobs:
+  verify-and-provision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: verify trigger source
+        run: |
+          if [[ ${{ github.event.client_payload.trigger_repo }} != ${{ env.BACKEND_REPOSITORY }} ]]; then
+            echo "unauthorized trigger source"
+            exit 1
+          fi
+
+      # provision test infrastructure start
+      # provision test infrastructure end
+
+      - name: notify trigger source repository
+        if: success()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT }}
+          repository: ${{ github.event.client_payload.trigger_repo }}
+          event-type: test-provision-complete
+          client-payload: |
+            {
+                "status": "success",
+                "verification_token": "${{ github.event.client_payload.verification_token }}"
+            }

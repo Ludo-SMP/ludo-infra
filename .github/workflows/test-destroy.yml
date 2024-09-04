@@ -1,0 +1,35 @@
+name: cleanup infrastructure for test environment
+
+on:
+  repository_dispatch:
+    types: [destroy-test-infra]
+
+jobs:
+  verify-and-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: verify trigger source
+        run: |
+          if [[ "${{ github.event.client_payload.trigger_repo }}" != "zxcev/ludo-backend-test" ]]; then
+            echo "unauthorized trigger source"
+            exit 1
+          fi
+
+      # provision test infrastructure start
+      # provision test infrastructure end
+
+      - name: notify trigger source repository
+        if: success()
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.event.client_payload.trigger_repo }}
+          event-type: test-cleanup-complete
+          client-payload: |
+            {
+                "status": "success",
+                "verification_token": "${{ github.event.client_payload.verification_token }}"
+            }
