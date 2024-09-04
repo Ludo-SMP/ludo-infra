@@ -11,6 +11,7 @@ on:
         options:
           - stage
           - prod
+          - test
 
 jobs:
   provision:
@@ -47,4 +48,4 @@ jobs:
             -var="db_password=${{ secrets.DB_PASSWORD }}" \
             -var="db_username=${{ vars.DB_USERNAME }}" \
             -auto-approve \
-            --parallelism=10
+            --parallelism=20
